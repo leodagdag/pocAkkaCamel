@@ -1,13 +1,11 @@
 package com.leodagdag.faultTolerance;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import akka.actor.*;
 import akka.dispatch.Mapper;
 import akka.japi.Function;
+import scala.Option;
 import scala.concurrent.duration.Duration;
 import akka.util.Timeout;
 import akka.event.Logging;
@@ -66,7 +64,7 @@ public class FaultHandlingDocSample {
         }
 
         public void onReceive(Object msg) {
-            log.debug("received message {}", msg);
+            //log.debug("received message {}", msg);
             if (msg instanceof Progress) {
                 Progress progress = (Progress) msg;
                 log.info("Current progress: {} %", progress.percent);
@@ -75,7 +73,7 @@ public class FaultHandlingDocSample {
                     getContext().system().shutdown();
                 }
             } else if (msg == ReceiveTimeout.getInstance()) {
-                // No progress within 15 seconds, ServiceUnavailable
+                // No progress within 15 seconds, CheckedException
                 log.error("Shutting down due to unavailable service");
                 getContext().system().shutdown();
             } else {
@@ -115,9 +113,11 @@ public class FaultHandlingDocSample {
         // about progress
         ActorRef progressListener;
         final ActorRef counterService = getContext().actorOf(Props.create(CounterService.class), "counter");
-        final int totalCount = 51;
+        final int totalCount = 26;
+        private int index = 0;
+        final private List<String> list = new ArrayList<String>(Arrays.asList("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"));
 
-        // Stop the CounterService child if it throws ServiceUnavailable
+        // Stop the CounterService child if it throws CheckedException
         private static SupervisorStrategy strategy = new OneForOneStrategy(-1,
                 Duration.Inf(), new Function<Throwable, Directive>() {
             @Override
@@ -144,16 +144,18 @@ public class FaultHandlingDocSample {
                         getContext().dispatcher(), null
                 );
             } else if (msg.equals(Do)) {
-                counterService.tell(new Increment(1), getSelf());
-                counterService.tell(new Increment(1), getSelf());
-                counterService.tell(new Increment(1), getSelf());
+                counterService.tell(new Increment(list.get(index)), getSelf());
+                index++;
+                counterService.tell(new Increment(list.get(index)), getSelf());
+                index++;
+
 
                 // Send current progress to the initial sender
                 pipe(ask(counterService, GetCurrentCount, askTimeout)
                         .mapTo(classTag(CurrentCount.class))
                         .map(new Mapper<CurrentCount, Progress>() {
                             public Progress apply(CurrentCount c) {
-                                return new Progress(100.0 * c.count / totalCount);
+                                return new Progress(100.0 * c.count.length() / totalCount);
                             }
                         }, getContext().dispatcher()), getContext().dispatcher())
                         .to(progressListener);
@@ -169,9 +171,9 @@ public class FaultHandlingDocSample {
 
         public static class CurrentCount {
             public final String key;
-            public final long count;
+            public final String count;
 
-            public CurrentCount(String key, long count) {
+            public CurrentCount(String key, String count) {
                 this.key = key;
                 this.count = count;
             }
@@ -182,9 +184,9 @@ public class FaultHandlingDocSample {
         }
 
         public static class Increment {
-            public final long n;
+            public final String n;
 
-            public Increment(long n) {
+            public Increment(String n) {
                 this.n = n;
             }
 
@@ -277,7 +279,7 @@ public class FaultHandlingDocSample {
             log.debug("received message {}", msg);
             if (msg instanceof Entry && ((Entry) msg).key.equals(key) && counter == null) {
                 // Reply from Storage of the initial value, now we can create the Counter
-                final long value = ((Entry) msg).value;
+                final String value = ((Entry) msg).value;
                 counter = getContext().actorOf(Props.create(Counter.class, key, value));
                 // Tell the counter to use current storage
                 counter.tell(new UseStorage(storage), getSelf());
@@ -345,10 +347,10 @@ public class FaultHandlingDocSample {
     public static class Counter extends UntypedActor {
         final LoggingAdapter log = Logging.getLogger(getContext().system(), this);
         final String key;
-        long count;
+        String count;
         ActorRef storage;
 
-        public Counter(String key, long initialValue) {
+        public Counter(String key, String initialValue) {
             this.key = key;
             this.count = initialValue;
         }
@@ -373,6 +375,7 @@ public class FaultHandlingDocSample {
             // Delegate dangerous work, to protect our valuable state.
             // We can continue without storage.
             if (storage != null) {
+                log.debug("sent message {}", count);
                 storage.tell(new Store(new Entry(key, count)), getSelf());
             }
         }
@@ -394,9 +397,9 @@ public class FaultHandlingDocSample {
 
         public static class Entry {
             public final String key;
-            public final long value;
+            public final String value;
 
-            public Entry(String key, long value) {
+            public Entry(String key, String value) {
                 this.key = key;
                 this.value = value;
             }
@@ -438,6 +441,18 @@ public class FaultHandlingDocSample {
         final LoggingAdapter log = Logging.getLogger(getContext().system(), this);
         final DummyDB db = DummyDB.instance;
 
+        /**
+         * User overridable callback: '''By default it disposes of all children and then calls `postStop()`.'''
+         * <p/>
+         * Is called on a crashed Actor right BEFORE it is restarted to allow clean
+         * up of resources before Actor is terminated.
+         */
+        @Override
+        public void preRestart(Throwable reason, Option<Object> message) throws Exception {
+            log.debug("preRestart reason {} message {}", reason,message );
+            super.preRestart(reason, message);
+        }
+
         @Override
         public void onReceive(Object msg) {
             log.debug("received message {}", msg);
@@ -446,9 +461,9 @@ public class FaultHandlingDocSample {
                 db.save(store.entry.key, store.entry.value);
             } else if (msg instanceof Get) {
                 Get get = (Get) msg;
-                Long value = db.load(get.key);
+                String value = db.load(get.key);
                 getSender().tell(new Entry(get.key, value == null ?
-                        Long.valueOf(0L) : value), getSelf());
+                        "" : value), getSelf());
             } else {
                 unhandled(msg);
             }
@@ -456,19 +471,24 @@ public class FaultHandlingDocSample {
     }
 
     public static class DummyDB {
+        private int index = 0;
         public static final DummyDB instance = new DummyDB();
-        private final Map<String, Long> db = new HashMap<String, Long>();
+        private final Map<String, String> db = new HashMap<String, String>();
 
         private DummyDB() {
         }
 
-        public synchronized void save(String key, Long value) throws StorageException {
-            if (11 <= value && value <= 14)
+        public synchronized void save(String key, String value) throws StorageException {
+            System.out.println("value:" + value);
+            index++;
+            //if (value.equals("ABCDEFGH"))
+            if (index == 5)
                 throw new StorageException("Simulated store failure " + value);
             db.put(key, value);
+            System.out.println("db:" + db);
         }
 
-        public synchronized Long load(String key) throws StorageException {
+        public synchronized String load(String key) throws StorageException {
             return db.get(key);
         }
     }

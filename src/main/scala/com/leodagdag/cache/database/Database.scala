@@ -35,16 +35,26 @@ class Database extends Actor with ActorLogging {
 
 
   def receive: Actor.Receive = {
-    case Request(requester: ActorRef, key: String) =>
-      requester ! cache.withFallback(key)
+    case Request(requester: ActorRef, id: Int, key: String) =>
+      cache.withFallback(key) match {
+        case Some(x) =>
+          requester ! Found(id, x)
+        case None =>
+          requester ! NotFound(id)
+      }
+
   }
 }
 
 object Database {
 
-  case class Request(requester: ActorRef, key: String)
+  case class Request(requester: ActorRef, id: Int, key: String)
 
-  case class Response(id: Int, obj: Any)
+  trait Response{
+    def id: Int
+  }
+  case class Found(override val id: Int, obj: Any) extends Response
+  case class NotFound(override val id: Int)extends Response
 
   val driver = "org.apache.derby.jdbc.EmbeddedDriver"
   val dbName = "cacheSample"

@@ -52,11 +52,6 @@
             <artifactId>akka-slf4j_2.10</artifactId>
             <version>2.3-M1</version>
         </dependency>
-        <dependency>
-            <groupId>com.typesafe.akka</groupId>
-            <artifactId>akka-testkit_2.10</artifactId>
-            <version>2.3-M1</version>
-        </dependency>
         <!-- Log -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
@@ -94,6 +89,17 @@
             <groupId>org.apache.derby</groupId>
             <artifactId>derbyclient</artifactId>
             <version>10.10.1.1</version>
+        </dependency>
+        <!-- Cache -->
+        <dependency>
+            <groupId>net.sf.ehcache</groupId>
+            <artifactId>ehcache</artifactId>
+            <version>2.7.4</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.transaction</groupId>
+            <artifactId>jta</artifactId>
+            <version>1.1</version>
         </dependency>
         <!-- Test -->
         <dependency>

@@ -10,6 +10,6 @@ class StatisticConsumer extends Actor with ActorLogging{
   def receive: Actor.Receive = LoggingReceive{
     case msg: Trade =>
       nb += 1
-      log.info("receive {} => total {}", msg, nb)
+      log.info("receive => total {}", nb)
   }
 }

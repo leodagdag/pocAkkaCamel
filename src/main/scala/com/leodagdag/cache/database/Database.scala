@@ -61,6 +61,7 @@ object Database {
   val connectionURL: String = s"jdbc:derby:$dbName;create=true"
   Class.forName(driver)
   val conn = DriverManager.getConnection(connectionURL)
+
   conn.createStatement().execute("DROP TABLE TRADE")
 
   conn.createStatement().execute("CREATE TABLE TRADE (ID VARCHAR(5) NOT NULL, VALUE VARCHAR (255), AMOUNT INT)")

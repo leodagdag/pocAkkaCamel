@@ -101,6 +101,12 @@
             <artifactId>jta</artifactId>
             <version>1.1</version>
         </dependency>
+        <!-- Cassandra -->
+        <dependency>
+            <groupId>com.datastax.cassandra</groupId>
+            <artifactId>cassandra-driver-core</artifactId>
+            <version>2.0.0-rc2</version>
+        </dependency>
         <!-- Test -->
         <dependency>
             <groupId>org.scalatest</groupId>
@@ -186,7 +192,7 @@
                     <source>1.7</source>
                     <showDeprecation>true</showDeprecation>
                     <showWarnings>true</showWarnings>
-                    <executable>${env.JAVA_HOME_7}/bin/javac</executable>
+                    <executable>${env.JAVA_HOME}/bin/javac</executable>
                 </configuration>
                 <executions>
                     <execution>

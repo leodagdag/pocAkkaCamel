@@ -17,12 +17,12 @@ class Startup {
     val global = system.actorOf(Props[StatisticConsumer], "my-global")
     val oms = system.actorOf(Props[OmsConsumer], "my-oms")
     val kepler = system.actorOf(Props[KeplerConsumer], "my-kepler")
-    Streams.diffusion.subscribe(global, "/diffusion")
-    Streams.diffusion.subscribe(oms, "/diffusion/oms")
-    Streams.diffusion.subscribe(kepler, "/diffusion/kepler")
+    Streams.diffusion.subscribe(global, "global")
+    Streams.diffusion.subscribe(oms, "oms")
+    Streams.diffusion.subscribe(kepler, "kepler")
 
-    Streams.diffusion.publish(new DiffusionEvent("/diffusion/oms", new Oms(1, "Trade OMS")))
-    Streams.diffusion.publish(new DiffusionEvent("/diffusion/kepler", new Kepler(2, "Trade KEP")))
+    Streams.diffusion.publish(new DiffusionEvent("oms", new Oms(1, "Trade OMS")))
+    Streams.diffusion.publish(new DiffusionEvent("kepler", new Kepler(2, "Trade KEP")))
     system.shutdown()
   }
 
